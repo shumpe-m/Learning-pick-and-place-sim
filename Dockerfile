@@ -55,7 +55,7 @@ RUN mkdir -p /root/catkin_ws/src && \
     cd /root/catkin_ws && \
     rosdep init
 
-ENV USERNAME=morita
+ENV USERNAME=Usr
 RUN useradd --create-home --shell /bin/bash ${USERNAME}
 
 RUN echo 'export ROS_IP=`hostname -I | cut -d' ' -f1`'  >> /root/.bashrc
