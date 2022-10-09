@@ -17,9 +17,9 @@ $ ./run.sh
     - CoppeliaSim_Edu_V4_4_0_rev0_Ubuntu20_04/
       - ...
 - /home
-  -/usrname
-    -/learning-pick-and-place
-      -/learning-pick-and-place-sim
+  - /usrname
+    - /learning-pick-and-place
+      - /learning-pick-and-place-sim
         - Docker
           - ...
         - assets
