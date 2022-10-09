@@ -1,6 +1,6 @@
 # Learning-pick-and-place-sim
 ## セットアップ方法
-- [gitリポジトリ](https://github.com/dti-research/learning-pick-and-place)をクローン
+- [gitリポジトリ](https://github.com/pantor/learning-pick-and-place)をクローン
 - 先程クローンしたディレクトリの中にこのリポジトリをクローン
 - Dockerのディレクトリに[ここ](https://www.coppeliarobotics.com/downloads)から**CoppeliaSim Edu**をダウンロード（Ubuntu20.04）
 - Dockerfileのcoppeliasimのインストールについて書かれている部分を先ほどダウンロードしたファイル名に変更
