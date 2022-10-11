@@ -6,8 +6,10 @@
 - Dockerfileのcoppeliasimのインストールについて書かれている部分を先ほどダウンロードしたファイル名に変更
 - Dockerディレクトリの中のrun.shを各々で調整
 - terminalで次のコードを実行
+```shell
 $ ./build.sh
 $ ./run.sh
+```
 
 ## すべての準備が完了した状態のディレクトリ構成test
 - ~/
@@ -27,8 +29,11 @@ $ ./run.sh
         - pick_and_place_Env.py
 
 ## タスクについて
-- デモとして以下を実行
+- terminalでroscoreを立ち上げる。
+- roscoreとはべつのterminalでデモとして以下を実行
+```shell
 $ python3 pick_and_place_Env.py
+```
 
 ## Coppelia-simのsceneについて
 - assetsの中に2つのsceneがあり、v2はbinがBox、v3はbinがPlaneとなっている。
