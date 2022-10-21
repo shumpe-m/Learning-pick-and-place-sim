@@ -1,6 +1,4 @@
-import time
-
-import os.path as osp
+import os
 from pyrep import PyRep
 from pyrep.robots.arms.arm import Arm
 from pyrep.objects.shape import Shape
@@ -9,7 +7,13 @@ from pyrep.objects.object import Object
 from pyrep.const import PrimitiveShape
 from pyrep.objects.vision_sensor import VisionSensor
 import numpy as np
+import seaborn as sns
+import pandas as pd
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 import quaternion
+
+import cv2
 
 
 class PyrepEnv:
@@ -65,10 +69,11 @@ class Pick_Place_Env(PyrepEnv):
 
     def __open_gripper(self):
         self.gripper_ctrl.set_pose([0, 0, 1, 0, 0, 0, 1])
+        [self.pr.step() for _ in range(40)]
 
     def __close_gripper(self):
         self.gripper_ctrl.set_pose([0, 0, -1, 0, 0, 0, 1])
-        [self.pr.step() for _ in range(30)]
+        [self.pr.step() for _ in range(40)]
 
     def _get_state(self):
         return np.array([o.get_position() for o in self.obj_list])
@@ -86,23 +91,24 @@ class Pick_Place_Env(PyrepEnv):
         else:
             self.ee_target.set_pose(pick_place_pose)
 
-        [self.pr.step() for _ in range(100)]
+        [self.pr.step() for _ in range(40)]
     
     def _pick(self, pose, z_arg):
         quat = np.roll(quaternion.as_float_array(quaternion.from_rotation_vector([0, 0, z_arg])), -1)
         # 物体の掴むべき点の直上に移動
-
         #ee_target_pose = self.box1_upper.copy()
         target_x = pose[0] + self.min_action_space[1, 0]
         target_y = pose[1] + self.min_action_space[1, 1]
         target_z = pose[2] + self.z_offset
-        self._gripper_pos(pick_place_pose = np.concatenate([[target_x, target_y, 0.25], quat]))
+        self._gripper_pos(pick_place_pose = np.concatenate([[target_x, target_y, 0.3], self.box2_upper[3:]]))
+        self._gripper_pos(pick_place_pose = np.concatenate([[target_x, target_y, 0.3], quat]))
         
         self._gripper_pos(pick_place_pose = np.concatenate([[target_x, target_y, target_z], quat]))
 
         self.__close_gripper()
 
-        self._gripper_pos(pick_place_pose = np.concatenate([[target_x, target_y, 0.25], quat]))
+        self._gripper_pos(pick_place_pose = np.concatenate([[target_x, target_y, 0.3], quat]))
+        self._gripper_pos(pick_place_pose = np.concatenate([[target_x, target_y, 0.3], self.box2_upper[3:]]))
         
         self._gripper_pos(pos_type = 'box2')
 
@@ -127,7 +133,7 @@ class Pick_Place_Env(PyrepEnv):
         
     def _create_object(self, pos = None, ori = None, color = [0.1, 1, 0.1], static = False, num = '', box = '1'):
         box_num = 0 if box == "1" else 1
-        pos[0:2] = pos[0:2] * (self.bias - 0.02) + self.min_action_space[box_num, 0:2]
+        pos[0:2] = pos[0:2] * (self.bias - 0.1) + self.min_action_space[box_num, 0:2] + 0.1
         pos[2] = pos[2] * 0.13 + self.z_offset
         obj = Shape.create(type = PrimitiveShape.CUBOID,
                                        mass = 0.01,
@@ -138,14 +144,12 @@ class Pick_Place_Env(PyrepEnv):
         obj.set_bullet_friction(1.)
         obj.set_position(pos)
         obj.set_orientation(ori)
-        [self.pr.step() for _ in range(100)]
 
     def reset(self):
         self.num_arrange = 0
         self.pr.stop()
         self.pr.start()
         self.num_obj = np.random.randint(1, 5) # randint()の２つ目の引数でオブジェクト数の最大値変更
-        #print("###########",self.num_obj)
         # 初期配置 複数可 後々、Box2に関係ないobjを追加
         for i in range(self.num_obj):
             self.goal_pose = np.random.rand(3)
@@ -170,7 +174,6 @@ class Pick_Place_Env(PyrepEnv):
         # Box1のオブジェクトを消去
         for i in range(self.num_obj):
             Object.remove(Shape('Obj' + str(i)))
-            [self.pr.step() for _ in range(30)]
         # 初期state取得
         self._gripper_pos(pos_type = "box2")
         state = self._get_depth()
@@ -186,23 +189,21 @@ class Pick_Place_Env(PyrepEnv):
         place_x = self.bias[0] * action[0]
         place_y = self.bias[1] * action[1]
         place_z = self.box_size[2] * action[2]
-        # 角度も必要
-        z_arg = (action[3] - 0.5) * np.pi  
+        z_arg = -action[3] * np.pi / 4
         return np.array([place_x, place_y, place_z]), z_arg
 
     def step(self, pick_norm_action):
         # アクション
         # 正規化された行動から環境用の行動に
         unnrom_action, z_arg = self.__norm_to_unnorm(pick_norm_action)
-
+        # オブジェクトの把持
         self._pick(unnrom_action, z_arg)
-        
+        # オブジェクトの配置
         result_state = self._place(unnrom_action, z_arg)
         reward = self.reward_function(result_state)
         # Box2のstateを取得
         self._gripper_pos("box2")
         next_state = self._get_depth()
-        
         return reward, next_state
 
 
@@ -228,6 +229,32 @@ class RandomAgent(Agent):
     def learn(self, replay_buffer):
         # do something
         pass
+    
+class Get_image:
+    def __init__(self):
+        #self.depth_min = 0.22
+        #self.depth_max = 0.44
+        self.depth_min = 0.35
+        self.depth_max = 0.40
+        now = time.ctime()
+        cnvtime = time.strptime(now)
+        self.dir = 'data/images/' + str(time.strftime("%Y_%m_%d_%H_%M", cnvtime))
+        os.mkdir(self.dir)
+
+    def image_save(self, state, episode = 0, step = 0):
+        # 正規化
+        state = (state - self.depth_min) / (self.depth_max - self.depth_min) * 255
+        #plt.figure()
+        #plt.axis("off")
+        #plt.imshow(state, cmap = 'gray', vmin = 0, vmax = 1)
+        #sns.heatmap(state)
+        path = str(self.dir) + '/' + str(episode) + '_' + str(step) + '.png'
+        #plt.savefig(path)
+        #plt.close('all')
+        
+        cv2.imwrite(path, state)
+        
+        
 
 
 if __name__ == '__main__':
@@ -236,13 +263,18 @@ if __name__ == '__main__':
 
     env = Pick_Place_Env(scene_file=abs_scene, headless=False)
     agent = RandomAgent(env.dim_action)
+    
+    image = Get_image()
 
-    num_episodes = 10
+    num_episodes = 3
     replay_buffer = []
 
     for e in range(num_episodes):
-        state, goal_state, len_episode = env.reset()
-        for i in range(len_episode):
+        state, goal_state, step = env.reset()
+        image.image_save(state = goal_state, episode = e)
+        print(state.shape)
+        for i in range(step):
+            image.image_save(state = state, episode = e, step = i+1)
             action = agent.act(state)
             reward, next_state = env.step(action)
             print(i, reward)
