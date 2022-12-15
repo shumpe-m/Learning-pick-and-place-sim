@@ -1,0 +1,15 @@
+###### Requirements without Version Specifiers ######
+flake8
+black
+numpy
+matplotlib
+tensorboard
+pyserial
+scikit-learn
+scikit-learn-intelex
+opencv-python
+sympy
+pyyaml
+rospkg
+
+###### Requirements with Version Specifiers ######

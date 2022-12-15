@@ -35,5 +35,13 @@ $ ./run.sh
 $ python3 pick_and_place_Env.py
 ```
 
+
+- テスト環境
+![Image of env](images/env.png)
+
+
 ## Coppelia-simのsceneについて
 - assetsの中に2つのsceneがあり、v2はbinがBox、v3はbinがPlaneとなっている。
+
+- シミュレータ内のカメラのdepth情報
+![Image of env](images/depth_img.png)
